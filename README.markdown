@@ -20,7 +20,7 @@ content into it:
 
     class Plugins(info: ProjectInfo) extends PluginDefinition(info) {
       val untypedRepo = "Untyped Repo" at "http://repo.untyped.com"
-      val closureCompiler = "com.untyped" % "sbt-closure" % "0.1"
+      val closureCompiler = "untyped" % "sbt-closure" % "0.1"
     }
 
 This will give you the ability to use the plugin in your project file. For example:
@@ -28,7 +28,7 @@ This will give you the ability to use the plugin in your project file. For examp
     import sbt._
     
     class MyProject(info: ProjectInfo) extends DefaultWebProject(info)
-      with com.untyped.ClosureCompilerPlugin {
+      with untyped.ClosureCompilerPlugin {
     
       // and so on...
     
