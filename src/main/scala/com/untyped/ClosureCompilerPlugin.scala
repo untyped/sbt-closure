@@ -1,4 +1,4 @@
-package com.untyped
+package untyped
 
 import sbt._
 
@@ -13,7 +13,7 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
 
   // Configuration ------------------------------
 
-  def closureSourcePath: Path = webappPath ##
+  def closureSourcePath: Path = webappPath
 
   def closureJsSourceFilter: NameFilter = filter("*.js")
   def closureJsSources: PathFinder = descendents(closureSourcePath, closureJsSourceFilter)
@@ -23,9 +23,16 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
   
   def closureOutputPath: Path = (outputPath / "sbt-closure-temp") ##
   
+  var _closurePrettyPrint = false
+  def closurePrettyPrint = _closurePrettyPrint
+  
+  var _closureVariableRenamingPolicy = VariableRenamingPolicy.LOCAL
+  def closureVariableRenamingPolicy = _closureVariableRenamingPolicy
+  
   def closureCompilerOptions = {
     val options = new CompilerOptions
-    options.variableRenaming = VariableRenamingPolicy.LOCAL
+    options.variableRenaming = closureVariableRenamingPolicy
+    options.prettyPrint = closurePrettyPrint
     options
   }
   
@@ -41,9 +48,17 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
   
   lazy val compileJs = dynamic(compileJsAction) describedAs "Compiles Javascript manifest files"
   
-  def compileJsAction = task{ None }.named("closure-complete").dependsOn(
-    closureManifestSources.get.map { new ManifestHelper(_).compileTask }.toSeq : _*)
+  def compileJsAction = task{ 
+    closureManifestSources.get.flatMap(new ManifestHelper(_).compile).toList.headOption
+  }.named("closure-compile")
 
+  def closurePrettifyAction = task{
+    _closureVariableRenamingPolicy = VariableRenamingPolicy.OFF
+    _closurePrettyPrint = true
+    None
+  }.named("closure-prettify")
+
+  override def jettyRunAction = super.jettyRunAction.dependsOn(closurePrettifyAction) 
   override def prepareWebappAction = super.prepareWebappAction.dependsOn(compileJs) 
   override def extraWebappFiles = super.extraWebappFiles +++ (closureOutputPath ** "*")
   override def webappResources = super.webappResources --- closureManifestSources
