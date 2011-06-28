@@ -20,7 +20,7 @@ content into it:
 
     class Plugins(info: ProjectInfo) extends PluginDefinition(info) {
       val untypedRepo = "Untyped Repo" at "http://repo.untyped.com"
-      val closureCompiler = "untyped" % "sbt-closure" % "0.2"
+      val closureCompiler = "untyped" % "sbt-closure" % "0.3-SNAPSHOT"
     }
 
 This will give you the ability to use the plugin in your project file. For example:
