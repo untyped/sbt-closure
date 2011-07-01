@@ -2,16 +2,28 @@ package untyped
 
 import sbt._
 
-import java.io.File
+import java.io.{File,FileReader,BufferedReader}
 import java.net.URL
+import java.util.Properties
 
 import scala.io.Source
 
 import com.google.javascript.jscomp._
 
+import com.samskivert.mustache.{Mustache,Template}
+
+
 trait ClosureCompilerPlugin extends DefaultWebProject {
 
   // Configuration ------------------------------
+
+  // Returns true if the path refers to a file that should be templated
+  // 
+  // It is templated if the file name contains .template. E.g. foo.template.js
+  def closureJsIsTemplated(path: Path): Boolean = path.name.contains(".template")
+
+  // Where we should look to find properties files that supply values we use when templating
+  def closurePropertiesPath: Path = mainResourcesPath
 
   def closureSourcePath: Path = webappPath
 
@@ -148,6 +160,17 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
       }
     }
     
+    // Templating -------------------------------
+
+    val attributes: Properties = new Props(closurePropertiesPath.asFile).properties.get
+
+    def renderTemplate(path: Path): String = {
+      val tmpl = 
+        Mustache.compiler().compile(new BufferedReader(new FileReader(path.asFile)))
+      tmpl.execute(attributes)
+      
+    }
+
     // Compilation ------------------------------
     
     // Once URLs have been downloaded and cached, we can run the whole file
@@ -158,7 +181,10 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
     def sourcePaths: List[Path] = lines.map(linePath _)
 
     def pathToJSSourceFile(path: Path): JSSourceFile =
-      JSSourceFile.fromFile(path.asFile)
+      if(closureJsIsTemplated(path)) 
+        JSSourceFile.fromCode(path.asFile.getAbsolutePath, renderTemplate(path))
+      else
+        JSSourceFile.fromFile(path.asFile)
 
     def compile: Option[String] = {
       val compiler = new Compiler
