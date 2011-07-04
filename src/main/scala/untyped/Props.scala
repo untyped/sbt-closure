@@ -57,7 +57,7 @@ class Props(val basePath: File) {
   }
 
   lazy val properties: Option[Properties] = {
-    searchPaths.find(p => {println(p); new File(p).exists()}).map{ propFile =>
+    searchPaths.find(p => new File(p).exists()).map{ propFile =>
       val props = new Properties()
       props.load(new FileInputStream(new File(propFile)))
       props

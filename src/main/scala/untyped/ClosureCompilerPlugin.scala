@@ -13,41 +13,10 @@ import com.google.javascript.jscomp._
 import com.samskivert.mustache.{Mustache,Template}
 
 
-trait ClosureCompilerPlugin extends DefaultWebProject {
+trait ClosureCompilerPlugin extends DefaultWebProject with ClosureCompilerConfig {
 
   // Configuration ------------------------------
 
-  // Returns true if the path refers to a file that should be templated
-  // 
-  // It is templated if the file name contains .template. E.g. foo.template.js
-  def closureJsIsTemplated(path: Path): Boolean = path.name.contains(".template")
-
-  // Where we should look to find properties files that supply values we use when templating
-  def closurePropertiesPath: Path = mainResourcesPath
-
-  def closureSourcePath: Path = webappPath
-
-  def closureJsSourceFilter: NameFilter = filter("*.js")
-  def closureJsSources: PathFinder = descendents(closureSourcePath, closureJsSourceFilter)
-  
-  def closureManifestSourceFilter: NameFilter = filter("*.jsm") | "*.jsmanifest"
-  def closureManifestSources: PathFinder = descendents(closureSourcePath, closureManifestSourceFilter)
-  
-  def closureOutputPath: Path = (outputPath / "sbt-closure-temp") ##
-  
-  var _closurePrettyPrint = false
-  def closurePrettyPrint = _closurePrettyPrint
-  
-  var _closureVariableRenamingPolicy = VariableRenamingPolicy.LOCAL
-  def closureVariableRenamingPolicy = _closureVariableRenamingPolicy
-  
-  def closureCompilerOptions = {
-    val options = new CompilerOptions
-    options.variableRenaming = closureVariableRenamingPolicy
-    options.prettyPrint = closurePrettyPrint
-    options
-  }
-  
   log.debug("Closure compiler config:")
   log.debug("  - closureSourcePath           : " + closureSourcePath)
   log.debug("  - closureOutputPath           : " + closureOutputPath)
@@ -55,7 +24,7 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
   log.debug("  - closureJsSources            : " + closureJsSources)
   log.debug("  - closureManifestSourceFilter : " + closureManifestSourceFilter)
   log.debug("  - closureManifestSources      : " + closureManifestSources)
-  
+
   // Top-level stuff ----------------------------
   
   lazy val compileJs = dynamic(compileJsAction) describedAs "Compiles Javascript manifest files"
@@ -98,87 +67,97 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
     log.debug("JS manifest config:")
     log.debug("  - manifestPath : " + manifestPath)
     log.debug("  - outputPath   : " + outputPath)
-    log.debug("  - lines        : " + lines)
-    log.debug("  - urls         : " + urls)
-    log.debug("  - urlPaths     : " + urlPaths)
-    log.debug("  - sourcePaths  : " + sourcePaths)
+    log.debug("  - lines        : " + manifestObjects)
+    log.debug("  - urls         : " + urlObjects)
+//    log.debug("  - urlPaths     : " + urlPaths)
+//    log.debug("  - sourcePaths  : " + sourcePaths)
     
     // Reading the manifest ---------------------
+
+    import ManifestOps._
     
     // Before we can build a JS file, we have to read its manifest,
     // chop out comments, and skip blank lines:
 
-    def stripComments(line: String) = "#.*$".r.replaceAllIn(line, "").trim
-    def isSkippable(line: String): Boolean = stripComments(line) == ""
-    def isURL(line: String): Boolean = stripComments(line).matches("^https?:.*")
     
-    def lines: List[String] =
-      FileUtilities.readString(manifestPath.asFile, log).
-                    right.
-                    get.
-                    split("[\r\n]+").
-                    filter(item => !isSkippable(item)).
-                    toList
+    lazy val manifestObjects: List[ManifestObject] =
+      parse(FileUtilities.readString(manifestPath.asFile, log).
+                          right.
+                          get)
+
+    lazy val urlObjects: List[ManifestUrl] =
+      manifestObjects.foldRight(Nil: List[ManifestUrl]){(elt, lst) => 
+        elt match {
+          case e:ManifestUrl => e :: lst
+          case _ => lst
+        }}
+      
 
     // URLs -------------------------------------
     
     // The first part of building a JS file is downloading and caching
     // any URLs specified in the manifest:
-    
-    def urlToFilename(line: String): String = 
-      """[^A-Za-z0-9.]""".r.replaceAllIn(line, "_")
-      
-    def urlContent(url: URL): String =
-      Source.fromInputStream(url.openStream).mkString
-
-    def linePath(line: String): Path = {
-      if(isURL(line)) {
-        toOutputPath(directoryPath) / urlToFilename(line)
-      } else {
-        Path.fromString(directoryPath, line)
-      }
-    }
-
-    def urlLines: List[String] = lines.filter(isURL _)
-    def urls: List[URL] = urlLines.map(new URL(_))
-    def urlPaths: List[Path] = urlLines.map(linePath _)
-    
-    def download(url: URL, path: Path): Option[String] = {
-      FileUtilities.createDirectory(Path.fromFile(path.asFile.getParent), log).
-        orElse(FileUtilities.write(path.asFile, urlContent(url), log))
-    }
-    
-    def downloadTasks: List[Task] = {
-      for((url, path) <- urls.zip(urlPaths)) yield {
-        val label = "closure-download " + url.toString
-        val product = List(path) from List(manifestPath)
-
-        fileTask(label, product){
-          log.debug("to " + path.toString)
-          download(url, path)
-        }.named(label)
-      }
-    }
-    
+          
+    // def urlLines: List[String] = lines.filter(isUrl _)
+    // def urls: List[URL] = urlLines.map(new URL(_))
+    // def urlPaths: List[Path] = urlLines.map(linePath _)
+        
     // Templating -------------------------------
 
-    val attributes: Properties = new Props(closurePropertiesPath.asFile).properties.get
-
-    def renderTemplate(path: Path): String = {
-      val tmpl = 
-        Mustache.compiler().compile(new BufferedReader(new FileReader(path.asFile)))
-      tmpl.execute(attributes)
-      
+    /** Instantiate the properties used for Mustache templating */
+    val attributes: Properties = {
+      val props = new Props(closurePropertiesPath.asFile)
+      props.properties.getOrElse {
+        throw new RuntimeException("Closure Compiler Plugin: No properties found for processing Mustache templates. Looked in " + props.searchPaths)
+      }
     }
 
+    /**
+     * By default the JMustache implementation will treat
+     * variables named like.this as a two part name and look
+     * for a variable called this within one called like
+     * (called compound variables in the docs). This breaks
+     * things with the default naming conventions for
+     * Java/Lift properties so we turn it off.
+     */
+    lazy val compiler = Mustache.compiler().standardsMode(true)
+
+    def renderTemplate(path: Path): String = {
+      val tmpl = compiler.compile(new BufferedReader(new FileReader(path.asFile)))
+      tmpl.execute(attributes)
+    }
+
+    def download(url: ManifestUrl, path: Path): Unit =
+      FileUtilities.createDirectory(Path.fromFile(path.asFile.getParent), log) match {
+        case Some(errorMsg) =>
+          throw new Exception("Failed to download " + url.url + ": " + errorMsg)
+        
+        case None =>
+          FileUtilities.write(path.asFile, url.content, log)
+      }
+    
     // Compilation ------------------------------
     
-    // Once URLs have been downloaded and cached, we can run the whole file
-    // through the Closure compiler:
+    // Once URLs have been downloaded and cached, we
+    // concatenate everything into one big file and run it
+    // through the Closure compiler
+
+    def objectPath(obj: ManifestObject): Path =
+      obj match {
+        case file: ManifestFile =>
+          file.path(directoryPath)
+        
+        // We download and cache ManifestUrls lines in a staging directory
+        case url: ManifestUrl =>
+          val outputDir = toOutputPath(directoryPath)
+          val outputPath = url.path(outputDir)
+          download(url, outputPath)
+          outputPath
+      }
     
     def externPaths: List[Path] = Nil
     
-    def sourcePaths: List[Path] = lines.map(linePath _)
+    def sourcePaths: List[Path] = manifestObjects.map(objectPath _)
 
     def pathToJSSourceFile(path: Path): JSSourceFile =
       if(closureJsIsTemplated(path)) 
@@ -221,7 +200,7 @@ trait ClosureCompilerPlugin extends DefaultWebProject {
       fileTask(label, product){
         log.debug("to " + outputPath.toString)
         compile
-      }.named(label).dependsOn(downloadTasks : _*)
+      }.named(label)
     }
     
   }

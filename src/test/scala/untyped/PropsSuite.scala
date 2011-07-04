@@ -6,6 +6,10 @@ import org.scalatest._
 
 class PropsSuite extends FunSuite {
 
+  test("No .props file yields no properties") {
+    expect(None){ new Props(new File(".")).properties }
+  }
+
   test("Props loads default.props if no other properties file found") {
     val f = new File("default.props")
     val writer = new FileWriter(f)
@@ -13,8 +17,6 @@ class PropsSuite extends FunSuite {
     writer.write("foo = bar")
     writer.close()
 
-    println(f)
-    println(f.getCanonicalFile.getParentFile)
     try {
       val props = new Props(f.getCanonicalFile.getParentFile)
       expect("bar"){ props.properties.get.getProperty("foo", "not-found") }

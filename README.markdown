@@ -20,7 +20,7 @@ content into it:
 
     class Plugins(info: ProjectInfo) extends PluginDefinition(info) {
       val untypedRepo = "Untyped Repo" at "http://repo.untyped.com"
-      val closureCompiler = "untyped" % "sbt-closure" % "0.3-SNAPSHOT"
+      val closureCompiler = "untyped" % "sbt-closure" % "0.4"
     }
 
 This will give you the ability to use the plugin in your project file. For example:
@@ -65,6 +65,37 @@ method. See the source for details.
 
 Finally, you can execute the plugin's compilation step independently of
 `prepare-webapp` using `sbt compile-js`.
+
+Templating
+================
+
+It is sometime useful to template Javascript files. For example, you might want
+scripts to refer to localhost while developing and your live server when
+deployed. This plugin supports templating Javascript files using the [Mustache]
+format and [Lift style properties] (though the implementation has no dependency
+on Lift).
+
+In summary, properties are looked for in =src/main/resources/prop= (by default;
+see below for customization). They are in the standard Java format. If you
+aren't interested in changing your properties depending on your build
+configuration just place the properties in =default.props=. Otherwise property
+files should be named =modeName.props=, where modeName is the setting of the
+=run.mode= system property, which can take on values of =test=, =staging=,
+=production=, =pilot=, or =default=.. If =run.mode= is not set, =default= is
+assumed.
+
+Any Javascript file that contains =.template= will be passed through a Mustache
+template processor before being processed by the Google compiler.
+
+Parameters controlling templating are:
+
+   - =closureJsIsTemplated= is function that indicates if a given Javascript
+     file should be run through the template processor
+
+   - =closurePropertiesPath= determines where properties are found
+
+[Mustache]: http://mustache.github.com/
+[Lift style]: http://www.assembla.com/spaces/liftweb/wiki/Properties
 
 Acknowledgements
 ================
