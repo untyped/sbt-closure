@@ -75,24 +75,24 @@ deployed. This plugin supports templating Javascript files using the [Mustache]
 format and [Lift style properties] (though the implementation has no dependency
 on Lift).
 
-In summary, properties are looked for in =src/main/resources/prop= (by default;
-see below for customization). They are in the standard Java format. If you
+In summary, properties are looked for in `src/main/resources/prop` (by default;
+see below for customization). They are in the standard `key=value` Java format. If you
 aren't interested in changing your properties depending on your build
-configuration just place the properties in =default.props=. Otherwise property
-files should be named =modeName.props=, where modeName is the setting of the
-=run.mode= system property, which can take on values of =test=, =staging=,
-=production=, =pilot=, or =default=.. If =run.mode= is not set, =default= is
+configuration just place the properties in `default.props`. Otherwise property
+files should be named `modeName.props`, where modeName is the setting of the
+`run.mode` system property, which can take on values of `test`, `staging`,
+`production`, `pilot`, or `default`. If `run.mode` is not set, `default` is
 assumed.
 
-Any Javascript file that contains =.template= will be passed through a Mustache
+Any Javascript file that contains `.template` will be passed through a Mustache
 template processor before being processed by the Google compiler.
 
 Parameters controlling templating are:
 
-   - =closureJsIsTemplated= is function that indicates if a given Javascript
+   - `closureJsIsTemplated` is function that indicates if a given Javascript
      file should be run through the template processor
 
-   - =closurePropertiesPath= determines where properties are found
+   - `closurePropertiesPath` determines where properties are found
 
 [Mustache]: http://mustache.github.com/
 [Lift style]: http://www.assembla.com/spaces/liftweb/wiki/Properties
