@@ -31,10 +31,11 @@ class Project(info: ProjectInfo) extends PluginProject(info) with test.ScalaScri
   //   } yield Resolver.sftp("Default Repo", host, path).as(user, new java.io.File(keyfile))
   // }
 
+  /*
   lazy val publishTo = Resolver.sftp("Default",
                                      System.getenv("DEFAULT_REPO_HOST"),
                                      System.getenv("DEFAULT_REPO_PATH")).
                         as(System.getenv("DEFAULT_REPO_USER"), 
                            new File(System.getenv("DEFAULT_REPO_KEYFILE"))) 
-
+  */
 }

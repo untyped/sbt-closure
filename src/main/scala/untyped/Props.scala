@@ -26,17 +26,30 @@ object RunModes extends Enumeration {
   val Profile = Value(6, "Profile")
 }
 
-class Props(val basePath: File) {
+class Props(val basePath: File, runMode: String, user: String) {
+  import RunModes._
+
   def addDot(s: String):String = s match {
     case null | "" => s
     case _ => s + "."
   }
 
   implicit def file2String(in: File) = in.getCanonicalPath
+  
+  lazy val mode = runMode.toLowerCase match {
+    case "test" => Test
+    case "staging" => Staging
+    case "production" => Production
+    case "pilot" => Pilot
+    case "profile" => Profile
+    case _ => Development
+  }
+  
+  //println("mode: %s".format(mode.toString))
     
-  lazy val modeName = addDot(Props.mode.toString.toLowerCase)
-  lazy val userName = addDot(Props.userName.toString.toLowerCase)
-  lazy val hostName = addDot(Props.hostName.toString.toLowerCase)
+  lazy val modeName = if (mode == Development) "" else addDot(mode.toString.toLowerCase)
+  lazy val userName = addDot(user.toLowerCase)
+  lazy val hostName = addDot(InetAddress.getLocalHost.getHostName.toLowerCase)
 
   // Lift has weird behaviour that we replicate:
   //
@@ -44,16 +57,15 @@ class Props(val basePath: File) {
   // search.  The 'spec' doesn't say anything about this but
   // it's in the implementation so we do it
   lazy val searchPaths: List[String] = {
-    val mode = if (Props.mode == RunModes.Development) "" else modeName
     List(
-      basePath + "/props/" + mode + userName + hostName + "props",
-      basePath + "/props/" + mode + userName + "props",
-      basePath + "/props/" + mode + hostName + "props",
-      basePath + "/props/" + mode + "default." + "props",
-      basePath + "/" + mode + userName + hostName + "props",
-      basePath + "/" + mode + userName + "props",
-      basePath + "/" + mode + hostName + "props",
-      basePath + "/" + mode + "default." + "props")
+      basePath + "/props/" + modeName + userName + hostName + "props",
+      basePath + "/props/" + modeName + userName + "props",
+      basePath + "/props/" + modeName + hostName + "props",
+      basePath + "/props/" + modeName + "default." + "props",
+      basePath + "/" + modeName + userName + hostName + "props",
+      basePath + "/" + modeName + userName + "props",
+      basePath + "/" + modeName + hostName + "props",
+      basePath + "/" + modeName + "default." + "props")
   }
 
   lazy val properties: Option[Properties] = {
@@ -63,26 +75,4 @@ class Props(val basePath: File) {
       props
     }
   }
-}
-
-object Props {
-  lazy val mode = {
-    import RunModes._
-    
-    val mode = System.getProperty("run.mode")
-    if (mode == null) 
-      Development
-    else
-      mode.toLowerCase match {
-        case "test" => Test
-        case "staging" => Staging
-        case "production" => Production
-        case "pilot" => Pilot
-        case "profile" => Profile
-        case _ => Development
-      }
-  }
-
-  lazy val userName = System.getProperty("user.name")
-  lazy val hostName = InetAddress.getLocalHost.getHostName
 }
