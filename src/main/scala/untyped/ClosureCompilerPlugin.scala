@@ -108,7 +108,8 @@ trait ClosureCompilerPlugin extends DefaultWebProject with ClosureCompilerConfig
     val attributes: Properties = {
       val props = new Props(closurePropertiesPath.asFile)
       props.properties.getOrElse {
-        throw new RuntimeException("Closure Compiler Plugin: No properties found for processing Mustache templates. Looked in " + props.searchPaths)
+        log.warn("Closure Compiler Plugin: No properties found for processing Mustache templates. Looked in " + props.searchPaths)
+        new Properties
       }
     }
 
