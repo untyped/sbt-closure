@@ -1,0 +1,5 @@
+# should generate js
+> closure
+$ exists target/scala-2.9.1/resource_managed/main/javascript/foo.js
+$ exists target/scala-2.9.1/resource_managed/main/footwo.js
+#> contents target/scala-2.9.1/resource_managed/main/javascript/foo.js fixtures/foo.js
