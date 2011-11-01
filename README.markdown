@@ -25,7 +25,7 @@ Then, in your build.sbt file, put:
 
     seq(closureSettings:_*)
 
-If you're using [xsbt-web-plugin](https://github.com/siasia/xsbt-web-plugin, "xsbt-web-plugin"), add the output files to the webapp with:
+If you're using [xsbt-web-plugin](https://github.com/siasia/xsbt-web-plugin "xsbt-web-plugin"), add the output files to the webapp with:
 
     // add managed resources to the webapp
     (webappResources in Compile) <+= (resourceManaged in Compile)
@@ -107,7 +107,7 @@ Parameters controlling templating are:
 Acknowledgements
 ================
 
-v0.6+ for SBT 0.11 based on [less-sbt](less-sbt plugin), Copyright (c) 2011 Doug Tangren.
+v0.6+ for SBT 0.11 based on [less-sbt](https://github.com/softprops/less-sbt), Copyright (c) 2011 Doug Tangren.
 v0.1-v0.5 for SBT 0.7 based on [Coffee Script SBT plugin], Copyright (c) 2010 Luke Amdor.
 
 Heavily influenced by the [YUI Compressor SBT plugin] by Jon Hoffman.
