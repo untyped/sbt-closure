@@ -1,7 +1,7 @@
 SBT Closure Plugin
 ==================
 
-**Superceded by sbt-js in https://github.com/untyped/sbt-plugins.**
+**Superseded by sbt-js in https://github.com/untyped/sbt-plugins.**
 
 [Simple Build Tool] plugin for compiling Javascript filesfrom multiple sources using Google's [Closure compiler].
 
